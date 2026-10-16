@@ -1,0 +1,6 @@
+{
+  "name": "Arabic With Friends",
+  "description": "A solo Arabic crossword board game where players place Arabic letter tiles on a 9x9 grid to create valid words and compete against a computer opponent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
