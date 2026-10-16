@@ -49,8 +49,8 @@ export function PlayerRack({
             );
           })}
 
-          {/* Empty Rack Fillers if less than 7 tiles */}
-          {Array.from({ length: Math.max(0, 7 - rack.length) }).map((_, idx) => (
+          {/* Empty Rack Fillers if less than 8 tiles */}
+          {Array.from({ length: Math.max(0, 8 - rack.length) }).map((_, idx) => (
             <div
               key={`empty-${idx}`}
               className="w-11 sm:w-12 h-12 sm:h-14 rounded-xl border-2 border-dashed border-slate-700 bg-slate-800/40 flex items-center justify-center"
