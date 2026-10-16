@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { GameHeader } from './components/Header/GameHeader';
 import { GameBoard } from './components/Board/GameBoard';
@@ -13,27 +13,29 @@ import { DictionaryModal } from './components/Modals/DictionaryModal';
 import { HowToPlayModal } from './components/Modals/HowToPlayModal';
 import { SwapTilesModal } from './components/Modals/SwapTilesModal';
 import { GameOverModal } from './components/Modals/GameOverModal';
-import { Lobby } from './components/Lobby/Lobby';
 import { ChatPanel } from './components/Chat/ChatPanel';
 import { Profile, logout, subscribeAuth } from './services/auth';
 import {
-  createInitialBoard,
   countFilledBoardCells,
+  createInitialBoard,
   drawTilesFromBag,
+  findComputerMove,
   GRID_FILL_TARGET_CELLS,
   RACK_CAPACITY,
   validateMoveAsync,
 } from './services/gameEngine';
 import {
   acceptInvite,
+  cancelChallenge,
   challengePlayer,
+  COMPUTER_UID,
   commitTurn,
-  declineInvite,
   GameDoc,
   goOffline,
   goOnline,
   Invite,
   OnlinePlayer,
+  startComputerGame,
   subscribeGame,
   subscribeInvites,
   subscribePresence,
@@ -119,6 +121,73 @@ function toGameState(game: GameDoc, uid: string, rack: Tile[]): GameState {
   };
 }
 
+function computerFinishFields(players: GameDoc['players'], reason: string): Partial<GameDoc> {
+  const [a, b] = Object.keys(players);
+  const scoreA = players[a]?.score ?? 0;
+  const scoreB = players[b]?.score ?? 0;
+  const winnerUid = scoreA === scoreB ? 'tie' : scoreA > scoreB ? a : b;
+  return { status: 'game_over', winnerUid, gameOverReason: reason };
+}
+
+/** Plays the computer's turn with the local solver and saves it. Runs in the player's browser only. */
+async function playComputerTurn(gameId: string, g: GameDoc, humanUid: string): Promise<void> {
+  const board: BoardCell[][] = JSON.parse(g.board);
+  const compRack: Tile[] = JSON.parse(g.computerRack || '[]');
+  const bag: Tile[] = JSON.parse(g.bag || '[]');
+  const result = findComputerMove(board, compRack, g.isFirstMove);
+
+  if (!result || !result.validation.isValid) {
+    const passes = g.consecutivePasses + 1;
+    const fields: Partial<GameDoc> = {
+      turnUid: humanUid,
+      turnNumber: g.turnNumber + 1,
+      consecutivePasses: passes,
+      lastMove: { by: COMPUTER_UID, action: 'pass', words: '[]', score: 0, cells: '[]' },
+      history: { ...(g.history || {}), [g.turnNumber]: { by: COMPUTER_UID, action: 'pass', score: 0 } },
+    };
+    if (passes >= 4) Object.assign(fields, computerFinishFields(g.players, 'passes'));
+    await commitTurn(gameId, COMPUTER_UID, g.turnNumber, fields, null);
+    return;
+  }
+
+  const placed = result.placedTiles;
+  const newBoard = board.map((row) =>
+    row.map((cell) => {
+      const pt = placed.find((p) => p.row === cell.row && p.col === cell.col);
+      return pt ? { ...cell, tile: pt.tile, playedBy: 'computer' as const, turnPlayed: g.turnNumber } : cell;
+    })
+  );
+  const placedIds = new Set(placed.map((p) => p.tile.id));
+  const remaining = compRack.filter((t) => !placedIds.has(t.id));
+  const { drawn, remainingBag } = drawTilesFromBag(bag, RACK_CAPACITY - remaining.length);
+  const gained = result.validation.totalScore;
+  const players = { ...g.players, [COMPUTER_UID]: { ...g.players[COMPUTER_UID], score: (g.players[COMPUTER_UID]?.score ?? 0) + gained } };
+  const filled = countFilledBoardCells(newBoard);
+  const gridDone = filled >= GRID_FILL_TARGET_CELLS;
+
+  const fields: Partial<GameDoc> = {
+    board: JSON.stringify(newBoard),
+    bag: JSON.stringify(remainingBag),
+    players,
+    computerRack: JSON.stringify([...remaining, ...drawn]),
+    turnUid: humanUid,
+    turnNumber: g.turnNumber + 1,
+    isFirstMove: false,
+    consecutivePasses: 0,
+    filledCellsCount: filled,
+    lastMove: {
+      by: COMPUTER_UID,
+      action: 'play',
+      words: JSON.stringify(result.validation.words),
+      score: gained,
+      cells: JSON.stringify(placed.map((p) => ({ row: p.row, col: p.col }))),
+    },
+    history: { ...(g.history || {}), [g.turnNumber]: { by: COMPUTER_UID, action: 'play', score: gained } },
+  };
+  if (gridDone) Object.assign(fields, computerFinishFields(players, 'grid_filled'));
+  await commitTurn(gameId, COMPUTER_UID, g.turnNumber, fields, null);
+}
+
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -166,6 +235,99 @@ export default function App() {
     };
   }, [profile?.uid]);
 
+  // Refs so timers always read the latest lists
+  const onlinePlayersRef = useRef<OnlinePlayer[]>([]);
+  onlinePlayersRef.current = onlinePlayers;
+  const invitesRef = useRef<Invite[]>([]);
+  invitesRef.current = invites;
+  const challengedUidRef = useRef<string | null>(null);
+  const acceptingRef = useRef<string | null>(null);
+
+  /** Starts a game against the computer and makes it the current game. */
+  const startVsComputer = async (me: Profile) => {
+    try {
+      const id = await startComputerGame(me);
+      challengedUidRef.current = null;
+      storeGameId(id);
+      setGameId(id);
+    } catch (err) {
+      console.error(err);
+      showToast('Could not start the game. Please try again.', 'error');
+    }
+  };
+
+  /** Drops a waiting challenge (if any) and plays the computer instead. */
+  const forceComputer = async () => {
+    if (!profile) return;
+    if (gameId && challengedUidRef.current) {
+      await cancelChallenge(gameId, challengedUidRef.current).catch(() => undefined);
+    }
+    challengedUidRef.current = null;
+    storeGameId(null);
+    setGameId(null);
+    await startVsComputer(profile);
+  };
+
+  // Matchmaking: with no game open, challenge an online player, or play the computer if nobody is online
+  useEffect(() => {
+    if (!profile || gameId) return;
+    const timer = setTimeout(() => {
+      if (invitesRef.current.length > 0) return; // an invite is waiting: the auto-accept effect handles it
+      const others = onlinePlayersRef.current.filter((p) => p.uid !== profile.uid);
+      if (others.length === 0) {
+        startVsComputer(profile);
+        return;
+      }
+      const target = others[0].uid;
+      challengePlayer(profile, target)
+        .then((id) => {
+          challengedUidRef.current = target;
+          storeGameId(id);
+          setGameId(id);
+        })
+        .catch(() => startVsComputer(profile));
+    }, 2000 + Math.random() * 1500); // random pause so two players don't challenge each other at once
+    return () => clearTimeout(timer);
+  }, [profile?.uid, gameId]);
+
+  // Join an invite automatically when I have no game
+  useEffect(() => {
+    if (!profile || gameId || invites.length === 0) return;
+    const inv = invites[0];
+    if (acceptingRef.current === inv.gameId) return;
+    acceptingRef.current = inv.gameId;
+    acceptInvite(profile, inv.gameId)
+      .then(() => {
+        storeGameId(inv.gameId);
+        setGameId(inv.gameId);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => {
+        acceptingRef.current = null;
+      });
+  }, [invites, gameId, profile?.uid]);
+
+  // My challenge was not accepted in 8 seconds: play the computer instead
+  useEffect(() => {
+    if (!profile || !gameId || !game || game.status !== 'waiting' || game.p1 !== profile.uid) return;
+    const timer = setTimeout(() => {
+      forceComputer();
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [gameId, game?.status]);
+
+  // Computer's turn: the human's browser (player 1) plays it after a short pause
+  useEffect(() => {
+    if (!profile || !gameId || !game) return;
+    if (game.status !== 'playing' || game.p2 !== COMPUTER_UID || game.turnUid !== COMPUTER_UID) return;
+    if (game.p1 !== profile.uid) return;
+    const snapshot = game;
+    const timer = setTimeout(() => {
+      playComputerTurn(gameId, snapshot, profile.uid).catch((err) => console.error(err));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [gameId, game?.turnNumber, game?.turnUid, game?.status]);
+
   // Live game document and my private rack
   useEffect(() => {
     if (!profile || !gameId) {
@@ -192,7 +354,7 @@ export default function App() {
   const myUid = profile?.uid || '';
   const opponentUid = game ? (game.p1 === myUid ? game.p2 : game.p1) : undefined;
   const opponentName = (opponentUid && game?.players[opponentUid]?.name) || 'Waiting...';
-  const opponentOnline = !!opponentUid && onlinePlayers.some((p) => p.uid === opponentUid);
+  const opponentOnline = opponentUid === COMPUTER_UID || (!!opponentUid && onlinePlayers.some((p) => p.uid === opponentUid));
 
   const gameState: GameState | null = useMemo(() => {
     if (!game || !profile || game.status === 'waiting') return null;
@@ -355,34 +517,6 @@ export default function App() {
     else showToast('Your opponent moved first.', 'error');
   };
 
-  const handleChallenge = async (uid: string) => {
-    if (!profile) return;
-    try {
-      const id = await challengePlayer(profile, uid);
-      storeGameId(id);
-      setGameId(id);
-      showToast('Invite sent. Waiting for your opponent to accept.', 'info');
-    } catch (err) {
-      console.error(err);
-      showToast('Could not send the invite. Please try again.', 'error');
-    }
-  };
-
-  const handleAccept = async (id: string) => {
-    if (!profile) return;
-    try {
-      await acceptInvite(profile, id);
-      storeGameId(id);
-      setGameId(id);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not join the game.', 'error');
-    }
-  };
-
-  const handleDecline = (id: string) => {
-    if (profile) declineInvite(profile.uid, id);
-  };
-
   const backToLobby = () => {
     clearPlacedTilesLocally();
     storeGameId(null);
@@ -406,37 +540,36 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  // Lobby: no active game selected
+  // No game yet: the app looks for an online player, or plays the computer
   if (!gameId || !game) {
+    const othersOnline = onlinePlayers.filter((p) => p.uid !== profile.uid).length;
     return (
-      <>
-        <Lobby
-          myUid={myUid}
-          onlinePlayers={onlinePlayers}
-          invites={invites}
-          onChallenge={handleChallenge}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
-        />
-        <div className="fixed bottom-3 left-0 right-0 flex justify-center">
-          <button onClick={handleLogout} className="px-4 py-2 rounded-full bg-slate-900/80 text-white text-xs font-bold">
-            Log out ({profile.name})
+      <div className="min-h-screen w-full bg-gradient-to-b from-teal-500 via-emerald-400 to-amber-300 flex flex-col items-center justify-center gap-4 p-6">
+        <div className="bg-white/95 rounded-2xl p-6 text-center shadow max-w-sm space-y-3">
+          <Sparkles className="w-8 h-8 text-teal-600 mx-auto" />
+          <p className="font-bold text-slate-900">Procurando um jogador online...</p>
+          <p className="text-xs text-slate-600">{othersOnline} jogador(es) online agora.</p>
+          <button onClick={() => startVsComputer(profile)} className="px-4 py-2 rounded-lg bg-amber-500 text-slate-900 text-xs font-black">
+            Jogar contra o computador
           </button>
         </div>
-      </>
+        <button onClick={handleLogout} className="px-4 py-2 rounded-full bg-slate-900/80 text-white text-xs font-bold">
+          Log out ({profile.name})
+        </button>
+      </div>
     );
   }
 
-  // Waiting for the opponent to accept the invite
+  // Waiting for the opponent to accept my challenge (the computer takes over after 8 seconds)
   if (game.status === 'waiting') {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-teal-500 via-emerald-400 to-amber-300 flex flex-col items-center justify-center gap-4 p-6">
         <div className="bg-white/95 rounded-2xl p-6 text-center shadow max-w-sm space-y-3">
           <Sparkles className="w-8 h-8 text-teal-600 mx-auto" />
-          <p className="font-bold text-slate-900">Waiting for your opponent to accept...</p>
-          <p className="text-xs text-slate-600">The game starts as soon as they accept your invite.</p>
-          <button onClick={backToLobby} className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 text-xs font-bold">
-            Back to lobby
+          <p className="font-bold text-slate-900">Esperando o jogador aceitar...</p>
+          <p className="text-xs text-slate-600">Se ninguém aceitar em alguns segundos, o jogo começa contra o computador.</p>
+          <button onClick={forceComputer} className="px-4 py-2 rounded-lg bg-amber-500 text-slate-900 text-xs font-black">
+            Jogar contra o computador agora
           </button>
         </div>
       </div>

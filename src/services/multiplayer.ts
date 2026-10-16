@@ -19,10 +19,14 @@ export interface PlayerInfo {
   score: number;
 }
 
+/** Fixed uid used for the computer opponent in single-player games. */
+export const COMPUTER_UID = 'computer';
+
 export interface GameDoc {
   status: 'waiting' | 'playing' | 'game_over';
   p1: string;
   p2?: string;
+  computerRack?: string; // JSON of Tile[], only used when p2 is the computer
   players: Record<string, PlayerInfo>;
   turnUid: string;
   turnNumber: number;
@@ -126,6 +130,39 @@ export async function declineInvite(uid: string, gameId: string) {
 }
 
 /** Joins a waiting game and deals the starting racks. Throws if the game is no longer open. */
+/** Creates a game against the computer, already playing, with the human moving first. */
+export async function startComputerGame(me: Profile): Promise<string> {
+  const gameRef = push(ref(db, 'games'));
+  const gameId = gameRef.key as string;
+  const fresh = createNewGame();
+  const doc: Partial<GameDoc> = {
+    status: 'playing',
+    p1: me.uid,
+    p2: COMPUTER_UID,
+    players: {
+      [me.uid]: { name: me.name, score: 0 },
+      [COMPUTER_UID]: { name: 'Computador', score: 0 },
+    },
+    turnUid: me.uid,
+    turnNumber: 1,
+    isFirstMove: true,
+    consecutivePasses: 0,
+    board: JSON.stringify(fresh.board),
+    bag: JSON.stringify(fresh.tileBag),
+    computerRack: JSON.stringify(fresh.computerRack),
+    createdAt: Date.now(),
+  };
+  await set(gameRef, clean(doc));
+  await set(ref(db, `racks/${gameId}/${me.uid}`), JSON.stringify(fresh.playerRack));
+  return gameId;
+}
+
+/** Removes a challenge nobody accepted. The invite removal may be refused by the rules; that is harmless. */
+export async function cancelChallenge(gameId: string, opponentUid: string): Promise<void> {
+  await set(ref(db, `games/${gameId}`), null);
+  await remove(ref(db, `invites/${opponentUid}/${gameId}`)).catch(() => undefined);
+}
+
 export async function acceptInvite(me: Profile, gameId: string): Promise<void> {
   const gameRef = ref(db, `games/${gameId}`);
   const fresh = createNewGame();
