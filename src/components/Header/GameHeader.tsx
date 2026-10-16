@@ -1,11 +1,13 @@
 import React from 'react';
 import { Bot, User, BookOpen, RotateCcw, HelpCircle, LogOut, Sparkles } from 'lucide-react';
-import { GameState, UserAccount } from '../../types/game';
+import { GameState } from '../../types/game';
 import { countFilledBoardCells, GRID_FILL_TARGET_CELLS, TOTAL_BOARD_CELLS } from '../../services/gameEngine';
 
 interface GameHeaderProps {
   gameState: GameState;
-  currentUser: UserAccount | null;
+  currentUser: { name: string } | null;
+  opponentName: string;
+  opponentOnline: boolean;
   onOpenDictionary: () => void;
   onOpenRules: () => void;
   onNewGame: () => void;
@@ -15,6 +17,8 @@ interface GameHeaderProps {
 export function GameHeader({
   gameState,
   currentUser,
+  opponentName,
+  opponentOnline,
   onOpenDictionary,
   onOpenRules,
   onNewGame,
@@ -125,7 +129,8 @@ export function GameHeader({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">
-                <span className="text-xs font-bold truncate">Computer AI</span>
+                <span className="text-xs font-bold truncate">{opponentName}</span>
+                {opponentOnline && <span className="text-[10px] font-bold text-emerald-300">● online</span>}
                 {!isPlayerTurn && (
                   <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
                 )}

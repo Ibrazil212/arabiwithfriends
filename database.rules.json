@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "invites": {
+      "$toUid": {
+        ".read": "auth != null && auth.uid === $toUid",
+        "$gameId": {
+          ".write": "auth != null && (newData.child('from').val() === auth.uid || auth.uid === $toUid)",
+          ".validate": "newData.hasChildren(['from', 'fromName', 'ts'])"
+        }
+      }
+    },
+    "games": {
+      "$gameId": {
+        ".read": "auth != null && (data.child('players').child(auth.uid).exists() || newData.child('players').child(auth.uid).exists())",
+        ".write": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || (data.child('status').val() === 'waiting' && newData.child('players').child(auth.uid).exists()))"
+      }
+    },
+    "racks": {
+      "$gameId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && (auth.uid === $uid || (!data.exists() && root.child('games').child($gameId).child('players').child(auth.uid).exists()))"
+        }
+      }
+    },
+    "chat": {
+      "$gameId": {
+        ".read": "auth != null && root.child('games').child($gameId).child('players').child(auth.uid).exists()",
+        "$msgId": {
+          ".write": "auth != null && root.child('games').child($gameId).child('players').child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['uid', 'text', 'ts']) && newData.child('uid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 300"
+        }
+      }
+    }
+  }
+}

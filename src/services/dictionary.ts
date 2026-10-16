@@ -899,33 +899,8 @@ class ArabicDictionaryService {
       };
     }
 
-    // 2. Fetch from backend Almaany / Linguistic checker API
-    try {
-      const response = await fetch(`/api/dictionary/check?word=${encodeURIComponent(clean)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.isValid) {
-          const entry: ArabicWordEntry = {
-            word: data.word || clean,
-            translation: data.translation || 'Valid Arabic word',
-            root: data.root,
-            type: data.type || 'noun',
-          };
-          this.addWord(entry);
-
-          return {
-            isValid: true,
-            word: clean,
-            entry,
-            definitionAr: data.definitionAr,
-            source: data.source || 'almaany',
-            almaanyUrl: data.almaanyUrl || fallbackUrl,
-          };
-        }
-      }
-    } catch (err) {
-      console.warn('Live dictionary check error:', err);
-    }
+    // 2. No server lookup: validation uses only the local lexicon (serverless build).
+    // The Almaany link is still provided so the player can check the word manually.
 
     return {
       isValid: false,

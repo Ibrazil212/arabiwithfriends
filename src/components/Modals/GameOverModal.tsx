@@ -6,10 +6,11 @@ import { countFilledBoardCells, GRID_FILL_TARGET_CELLS, TOTAL_BOARD_CELLS } from
 
 interface GameOverModalProps {
   gameState: GameState;
+  opponentName: string;
   onPlayAgain: () => void;
 }
 
-export function GameOverModal({ gameState, onPlayAgain }: GameOverModalProps) {
+export function GameOverModal({ gameState, opponentName, onPlayAgain }: GameOverModalProps) {
   const isPlayerWinner = gameState.winner === 'player';
   const isTie = gameState.winner === 'tie';
   const filledCells = gameState.filledCellsCount ?? countFilledBoardCells(gameState.board);
@@ -46,14 +47,14 @@ export function GameOverModal({ gameState, onPlayAgain }: GameOverModalProps) {
               ? 'Congratulations! You Won!'
               : isTie
               ? 'It’s a Tie!'
-              : 'Computer AI Won!'}
+              : `${opponentName} Won!`}
           </h2>
           <p className="text-xs text-slate-300 mt-1">
             {isGridTargetMet
               ? '🎯 80% Grid Fill Target Achieved!'
               : isPlayerWinner
               ? 'Excellent Arabic word strategy!'
-              : 'Great match! Try another round to beat the computer.'}
+              : 'Great match! Play another round to get your revenge.'}
           </p>
         </div>
 
@@ -69,7 +70,7 @@ export function GameOverModal({ gameState, onPlayAgain }: GameOverModalProps) {
           </div>
           <div className="space-y-1 border-l border-slate-700">
             <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
-              Computer
+              {opponentName}
             </span>
             <div className="text-3xl font-black font-mono text-white">
               {gameState.computerScore}
