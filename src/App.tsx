@@ -159,7 +159,7 @@ async function playComputerTurn(gameId: string, g: GameDoc, humanUid: string): P
   );
   const placedIds = new Set(placed.map((p) => p.tile.id));
   const remaining = compRack.filter((t) => !placedIds.has(t.id));
-  const { drawn, remainingBag } = drawTilesFromBag(bag, RACK_CAPACITY - remaining.length);
+  const { drawn, remainingBag } = drawTilesFromBag(bag, RACK_CAPACITY - remaining.length, remaining);
   const gained = result.validation.totalScore;
   const players = { ...g.players, [COMPUTER_UID]: { ...g.players[COMPUTER_UID], score: (g.players[COMPUTER_UID]?.score ?? 0) + gained } };
   const filled = countFilledBoardCells(newBoard);
@@ -432,7 +432,7 @@ export default function App() {
       );
 
       const needed = RACK_CAPACITY - rack.length;
-      const { drawn, remainingBag } = drawTilesFromBag(bag, needed);
+      const { drawn, remainingBag } = drawTilesFromBag(bag, needed, rack);
       const newRack = [...rack, ...drawn];
       const myScore = (game.players[myUid]?.score ?? 0) + validation.totalScore;
       const filled = countFilledBoardCells(newBoard);
@@ -503,7 +503,7 @@ export default function App() {
     const baseRack = [...rack, ...placedTiles.map((pt) => pt.tile)];
     const remaining = baseRack.filter((t) => !selectedTileIds.includes(t.id));
     const swapped = baseRack.filter((t) => selectedTileIds.includes(t.id));
-    const { drawn, remainingBag } = drawTilesFromBag(bag, selectedTileIds.length);
+    const { drawn, remainingBag } = drawTilesFromBag(bag, selectedTileIds.length, remaining);
     const fields: Partial<GameDoc> = {
       bag: JSON.stringify([...remainingBag, ...swapped]),
       turnUid: opponentUid as string,

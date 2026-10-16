@@ -5,7 +5,7 @@ import { arabicDictionary } from './dictionary';
 export const BOARD_SIZE = 9;
 export const CENTER_ROW = 4;
 export const CENTER_COL = 4;
-export const RACK_CAPACITY = 7;
+export const RACK_CAPACITY = 8;
 export const TOTAL_BOARD_CELLS = BOARD_SIZE * BOARD_SIZE; // 81 cells
 export const GRID_FILL_TARGET_PERCENT = 80;
 export const GRID_FILL_TARGET_CELLS = Math.ceil(TOTAL_BOARD_CELLS * 0.8); // 65 cells (80% of grid)
@@ -32,18 +32,24 @@ export function countFilledBoardCells(board: BoardCell[][]): number {
  */
 export function drawTilesFromBag(
   bag: Tile[],
-  count: number
+  count: number,
+  keep: Tile[] = []
 ): { drawn: Tile[]; remainingBag: Tile[] } {
   let currentBag = [...bag];
   const drawn: Tile[] = [];
+  // Letters already on the rack (kept tiles plus tiles drawn now) are avoided when possible
+  const used = new Set(keep.map((t) => t.letter));
 
   while (drawn.length < count) {
     if (currentBag.length === 0) {
       currentBag = generateTileBag();
     }
-    const tile = currentBag.shift();
+    let index = currentBag.findIndex((t) => !used.has(t.letter));
+    if (index === -1) index = 0;
+    const [tile] = currentBag.splice(index, 1);
     if (tile) {
       drawn.push(tile);
+      used.add(tile.letter);
     }
   }
 
@@ -121,9 +127,11 @@ export function createInitialBoard(): BoardCell[][] {
  * Initializes a new game state
  */
 export function createNewGame(): GameState {
-  const tileBag = generateTileBag();
-  const playerRack = tileBag.splice(0, RACK_CAPACITY);
-  const computerRack = tileBag.splice(0, RACK_CAPACITY);
+  const first = drawTilesFromBag(generateTileBag(), RACK_CAPACITY);
+  const second = drawTilesFromBag(first.remainingBag, RACK_CAPACITY, first.drawn);
+  const tileBag = second.remainingBag;
+  const playerRack = first.drawn;
+  const computerRack = second.drawn;
 
   return {
     board: createInitialBoard(),
@@ -360,7 +368,7 @@ export async function validateMoveAsync(
   // 8. Calculate total score with multipliers + Bingo bonus
   let totalScore = formedWords.reduce((sum, w) => sum + w.score, 0);
   if (placedTiles.length === RACK_CAPACITY) {
-    totalScore += 30; // 7-letter Bingo bonus!
+    totalScore += 30; // Bingo bonus: all rack tiles used!
   }
 
   return {
