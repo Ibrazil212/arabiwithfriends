@@ -623,10 +623,9 @@ export default function App() {
           onRemoveTempTile={handleRemoveTempTile}
           lastComputerMoveCells={gameState.lastComputerMove?.cells}
         />
-        <div className="mt-3">
-          <ChatPanel gameId={gameId} myUid={myUid} myName={profile.name} />
-        </div>
       </main>
+
+      <ChatPanel gameId={gameId} myUid={myUid} myName={profile.name} />
 
       <footer className="pb-3 pt-1">
         <ActionControls
