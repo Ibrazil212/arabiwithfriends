@@ -70,6 +70,20 @@ export default function App() {
     }
   };
 
+  // Drop a rack tile onto an empty square (drag and drop)
+  const handlePlaceFromRack = (tile: Tile, row: number, col: number) => {
+    if (gameState.turn !== 'player' || gameState.status !== 'playing' || isValidating) return;
+    if (gameState.board[row][col].tile) return;
+    if (placedTiles.some((pt) => pt.row === row && pt.col === col)) return;
+
+    setGameState((prev) => ({
+      ...prev,
+      playerRack: prev.playerRack.filter((t) => t.id !== tile.id),
+    }));
+    setPlacedTiles((prev) => [...prev, { row, col, tile }]);
+    setSelectedRackTile(null);
+  };
+
   // Remove temporary tile from board and return back to rack
   const handleRemoveTempTile = (row: number, col: number) => {
     if (isValidating) return;
@@ -466,6 +480,7 @@ export default function App() {
           rack={gameState.playerRack}
           selectedTileId={selectedRackTile?.id || null}
           onSelectTile={handleSelectRackTile}
+          onPlaceTile={handlePlaceFromRack}
           disabled={gameState.turn !== 'player' || gameState.status !== 'playing'}
         />
       </footer>

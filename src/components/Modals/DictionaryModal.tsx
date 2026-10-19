@@ -18,6 +18,7 @@ export function DictionaryModal({ isOpen, onClose }: DictionaryModalProps) {
     definitionAr?: string;
     source?: string;
     almaanyUrl?: string;
+    serverUnavailable?: boolean;
   } | null>(null);
 
   if (!isOpen) return null;
@@ -38,6 +39,7 @@ export function DictionaryModal({ isOpen, onClose }: DictionaryModalProps) {
         definitionAr: res.definitionAr,
         source: res.source,
         almaanyUrl: res.almaanyUrl,
+        serverUnavailable: res.serverUnavailable,
       });
     } catch (err) {
       console.error(err);
@@ -173,7 +175,11 @@ export function DictionaryModal({ isOpen, onClose }: DictionaryModalProps) {
                   </div>
                 ) : (
                   <div className="space-y-2 pt-1">
-                    <p className="text-xs text-rose-300/90">لم يتم العثور على الكلمة كلفظ فصيح في معجم المعاني.</p>
+                    <p className="text-xs text-rose-300/90">
+                      {result.serverUnavailable
+                        ? 'تعذر الاتصال بخادم المعجم. الآن تُقبل فقط الكلمات الموجودة في القائمة المحلية.'
+                        : 'لم يتم العثور على الكلمة كلفظ فصيح في معجم المعاني.'}
+                    </p>
                     {result.almaanyUrl && (
                       <a
                         href={result.almaanyUrl}

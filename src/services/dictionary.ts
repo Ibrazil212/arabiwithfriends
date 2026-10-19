@@ -762,6 +762,34 @@ export const ARABIC_WORD_LIST: ArabicWordEntry[] = [
   { word: 'نقاط', translation: 'Points / Dots', root: 'ن ق ط', type: 'noun' },
   { word: 'لوح', translation: 'Board / Tablet', root: 'ل و ح', type: 'noun' },
   { word: 'رقعة', translation: 'Board / Patch', root: 'ر ق ع', type: 'noun' },
+  // Common everyday words added for the mobile version
+  { word: 'أحمر', translation: 'Red', type: 'adjective' },
+  { word: 'أزرق', translation: 'Blue', type: 'adjective' },
+  { word: 'أخضر', translation: 'Green', type: 'adjective' },
+  { word: 'أسود', translation: 'Black', type: 'adjective' },
+  { word: 'أبيض', translation: 'White', type: 'adjective' },
+  { word: 'أصفر', translation: 'Yellow', type: 'adjective' },
+  { word: 'أرض', translation: 'Earth / Land', type: 'noun' },
+  { word: 'قدم', translation: 'Foot', type: 'noun' },
+  { word: 'لسان', translation: 'Tongue', type: 'noun' },
+  { word: 'أكل', translation: 'Ate / Eat', type: 'verb' },
+  { word: 'كبير', translation: 'Big / Large', type: 'adjective' },
+  { word: 'صغير', translation: 'Small', type: 'adjective' },
+  { word: 'طويل', translation: 'Long / Tall', type: 'adjective' },
+  { word: 'قصير', translation: 'Short', type: 'adjective' },
+  { word: 'سريع', translation: 'Fast', type: 'adjective' },
+  { word: 'حلو', translation: 'Sweet / Nice', type: 'adjective' },
+  { word: 'حار', translation: 'Hot', type: 'adjective' },
+  { word: 'بارد', translation: 'Cold', type: 'adjective' },
+  { word: 'جديد', translation: 'New', type: 'adjective' },
+  { word: 'قديم', translation: 'Old', type: 'adjective' },
+  { word: 'أم', translation: 'Mother', type: 'noun' },
+  { word: 'أب', translation: 'Father', type: 'noun' },
+  { word: 'أخت', translation: 'Sister', type: 'noun' },
+  { word: 'ليل', translation: 'Night', type: 'noun' },
+  { word: 'نهار', translation: 'Daytime', type: 'noun' },
+  { word: 'دقيقة', translation: 'Minute', type: 'noun' },
+  { word: 'لعب', translation: 'Played / Game', type: 'verb' },
 ];
 
 /**
@@ -883,6 +911,7 @@ class ArabicDictionaryService {
     definitionAr?: string;
     source?: string;
     almaanyUrl: string;
+    serverUnavailable?: boolean;
   }> {
     const clean = word.trim();
     const fallbackUrl = this.getAlmaanyUrl(clean);
@@ -904,8 +933,10 @@ class ArabicDictionaryService {
     }
 
     // 2. Fetch from backend Almaany / Linguistic checker API
+    let serverUnavailable = false;
     try {
       const response = await fetch(`${API_BASE_URL}/api/dictionary/check?word=${encodeURIComponent(clean)}`);
+      if (!response.ok) serverUnavailable = true;
       if (response.ok) {
         const data = await response.json();
         if (data.isValid) {
@@ -929,12 +960,14 @@ class ArabicDictionaryService {
       }
     } catch (err) {
       console.warn('Live dictionary check error:', err);
+      serverUnavailable = true;
     }
 
     return {
       isValid: false,
       word: clean,
       almaanyUrl: fallbackUrl,
+      serverUnavailable,
     };
   }
 
