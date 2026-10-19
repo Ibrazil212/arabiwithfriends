@@ -84,7 +84,7 @@ export function PlayerRack({
   return (
     <div className="w-full max-w-md mx-auto px-3 py-1.5">
       <div className="bg-white p-2 rounded-2xl border border-white shadow-xl">
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+        <div dir="rtl" className="flex items-center justify-center gap-1.5 sm:gap-2">
           {rack.map((tile) => {
             const isSelected = selectedTileId === tile.id;
 
@@ -110,7 +110,7 @@ export function PlayerRack({
                   drag?.tile.id === tile.id ? 'opacity-30' : ''
                 }`}
               >
-                <span className="font-bold text-2xl sm:text-3xl leading-[1.4] pt-0.5 text-slate-950">
+                <span className="font-normal text-xl sm:text-2xl leading-[1.5] pt-0.5 text-slate-950">
                   {tile.letter}
                 </span>
 
@@ -138,7 +138,7 @@ export function PlayerRack({
           className="fixed z-50 pointer-events-none w-14 h-16 rounded-xl bg-gradient-to-b from-amber-200 to-amber-400 border-2 border-amber-600 shadow-2xl flex items-center justify-center"
           style={{ left: drag.x, top: drag.y, transform: 'translate(-50%, -60%)', fontFamily: TILE_FONT }}
         >
-          <span className="font-bold text-3xl leading-[1.4] pt-0.5 text-slate-950">{drag.tile.letter}</span>
+          <span className="font-normal text-2xl leading-[1.5] pt-0.5 text-slate-950">{drag.tile.letter}</span>
           <span className="absolute bottom-0.5 right-1 text-xs font-bold text-slate-700 leading-none">
             {drag.tile.points}
           </span>

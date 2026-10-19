@@ -158,7 +158,7 @@ export default function App() {
 
       // Replenish player rack with continuous replacement from tile bag
       const needed = RACK_CAPACITY - gameState.playerRack.length;
-      const { drawn, remainingBag: newBag } = drawTilesFromBag(gameState.tileBag, needed);
+      const { drawn, remainingBag: newBag } = drawTilesFromBag(gameState.tileBag, needed, gameState.playerRack);
       const newPlayerRack = [...gameState.playerRack, ...drawn];
       const newScore = gameState.playerScore + validation.totalScore;
 
@@ -246,7 +246,7 @@ export default function App() {
     setGameState((prev) => {
       const remainingRack = prev.playerRack.filter((t) => !selectedTileIds.includes(t.id));
       const swappedTiles = prev.playerRack.filter((t) => selectedTileIds.includes(t.id));
-      const { drawn, remainingBag } = drawTilesFromBag(prev.tileBag, selectedTileIds.length);
+      const { drawn, remainingBag } = drawTilesFromBag(prev.tileBag, selectedTileIds.length, remainingRack);
       const newBag = [...remainingBag, ...swappedTiles];
 
       showToast(`Swapped ${selectedTileIds.length} tiles for new letters.`, 'info');
@@ -289,7 +289,7 @@ export default function App() {
         const compUsedIds = new Set(compPlaced.map((p) => p.tile.id));
         const remRack = gameState.computerRack.filter((t) => !compUsedIds.has(t.id));
         const needed = RACK_CAPACITY - remRack.length;
-        const { drawn, remainingBag: newBag } = drawTilesFromBag(gameState.tileBag, needed);
+        const { drawn, remainingBag: newBag } = drawTilesFromBag(gameState.tileBag, needed, remRack);
         const newCompRack = [...remRack, ...drawn];
         const newScore = gameState.computerScore + validation.totalScore;
 

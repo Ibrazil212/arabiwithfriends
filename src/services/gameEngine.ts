@@ -32,19 +32,23 @@ export function countFilledBoardCells(board: BoardCell[][]): number {
  */
 export function drawTilesFromBag(
   bag: Tile[],
-  count: number
+  count: number,
+  keep: Tile[] = []
 ): { drawn: Tile[]; remainingBag: Tile[] } {
   let currentBag = [...bag];
   const drawn: Tile[] = [];
+  const letterKey = (t: Tile) => normalizeArabic(t.letter);
 
   while (drawn.length < count) {
     if (currentBag.length === 0) {
       currentBag = generateTileBag();
     }
-    const tile = currentBag.shift();
-    if (tile) {
-      drawn.push(tile);
-    }
+    // Prefer a letter the rack does not already hold, so the player is not stuck with repeats.
+    const taken = new Set([...keep, ...drawn].map(letterKey));
+    let idx = currentBag.findIndex((t) => !taken.has(letterKey(t)));
+    if (idx === -1) idx = 0; // only repeats are left in the bag
+    const [tile] = currentBag.splice(idx, 1);
+    drawn.push(tile);
   }
 
   return { drawn, remainingBag: currentBag };
@@ -121,9 +125,12 @@ export function createInitialBoard(): BoardCell[][] {
  * Initializes a new game state
  */
 export function createNewGame(): GameState {
-  const tileBag = generateTileBag();
-  const playerRack = tileBag.splice(0, RACK_CAPACITY);
-  const computerRack = tileBag.splice(0, RACK_CAPACITY);
+  const initialBag = generateTileBag();
+  const playerDraw = drawTilesFromBag(initialBag, RACK_CAPACITY);
+  const computerDraw = drawTilesFromBag(playerDraw.remainingBag, RACK_CAPACITY, playerDraw.drawn);
+  const playerRack = playerDraw.drawn;
+  const computerRack = computerDraw.drawn;
+  const tileBag = computerDraw.remainingBag;
 
   return {
     board: createInitialBoard(),
@@ -601,7 +608,7 @@ async function evaluateWordAsync(
   const lettersReverse = [...coords].reverse().map(pt => board[pt.row][pt.col].tile!.letter).join('');
 
   // Determine candidates: for horizontal, test RTL first (e.g. رحل)
-  const candidateList = direction === 'horizontal' ? [lettersReverse, lettersForward] : [lettersForward, lettersReverse];
+  const candidateList = direction === 'horizontal' ? [lettersReverse] : [lettersForward, lettersReverse];
 
   let chosenWord = candidateList[0];
   let normalized = normalizeArabic(chosenWord);
@@ -683,7 +690,7 @@ function evaluateWordSync(
   const lettersForward = coords.map(pt => board[pt.row][pt.col].tile!.letter).join('');
   const lettersReverse = [...coords].reverse().map(pt => board[pt.row][pt.col].tile!.letter).join('');
 
-  const candidateList = direction === 'horizontal' ? [lettersReverse, lettersForward] : [lettersForward, lettersReverse];
+  const candidateList = direction === 'horizontal' ? [lettersReverse] : [lettersForward, lettersReverse];
 
   let chosenWord = candidateList[0];
   let normalized = normalizeArabic(chosenWord);
@@ -780,7 +787,7 @@ export function findComputerMove(
             usedRackIndices.add(rackIdx);
             placedTiles.push({
               row: CENTER_ROW,
-              col: startCol + i,
+              col: startCol + (word.length - 1 - i), // right to left
               tile: computerRack[rackIdx],
             });
           }
@@ -861,14 +868,14 @@ export function findComputerMove(
       if (charIndex === -1) continue;
 
       // Try Horizontal placement intersecting anchor
-      const startCol = anchor.col - charIndex;
+      const startCol = anchor.col - (word.length - 1 - charIndex); // right to left
       if (startCol >= 0 && startCol + word.length <= BOARD_SIZE) {
         const placedTiles: PlacedTile[] = [];
         const usedRackIndices = new Set<number>();
         let possible = true;
 
         for (let i = 0; i < word.length; i++) {
-          const targetCol = startCol + i;
+          const targetCol = startCol + (word.length - 1 - i); // right to left
           const targetChar = word[i];
           const existingTile = board[anchor.row][targetCol].tile;
 
