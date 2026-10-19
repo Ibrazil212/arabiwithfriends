@@ -27,34 +27,35 @@ export function ActionControls({
   onOpenDictionary,
 }: ActionControlsProps) {
   return (
-    <div className="w-full max-w-md mx-auto px-3 py-1.5 space-y-1.5">
-      {/* Primary Action Buttons: Confirm, Dictionary, Clear (Matching PDF Page 3) */}
-      <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          disabled={!isPlayerTurn || !canSubmit || isValidating}
-          onClick={onConfirm}
-          className="py-3 px-2 rounded-xl font-extrabold text-sm text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 shadow-md disabled:opacity-40 disabled:pointer-events-none transition flex items-center justify-center gap-1.5"
-        >
-          {isValidating ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Checking...</span>
-            </>
-          ) : (
-            <>
-              <Check className="w-4 h-4 stroke-[3]" />
-              <span>Confirm</span>
-            </>
-          )}
-        </button>
+    <div className="w-full max-w-md mx-auto px-3 py-1.5 space-y-2">
+      {/* Primary action: Confirm is the main call to action */}
+      <button
+        type="button"
+        disabled={!isPlayerTurn || !canSubmit || isValidating}
+        onClick={onConfirm}
+        className="w-full py-3.5 rounded-2xl font-black text-base text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] shadow-lg disabled:opacity-40 disabled:pointer-events-none transition flex items-center justify-center gap-2"
+      >
+        {isValidating ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Checking...</span>
+          </>
+        ) : (
+          <>
+            <Check className="w-5 h-5 stroke-[3]" />
+            <span>Confirm</span>
+          </>
+        )}
+      </button>
 
+      {/* Secondary actions: quieter, same weight between them */}
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onOpenDictionary}
-          className="py-3 px-2 rounded-xl font-extrabold text-sm text-white bg-teal-600 hover:bg-teal-500 active:scale-95 shadow-md transition flex items-center justify-center gap-1.5"
+          className="py-2.5 px-2 rounded-xl font-bold text-sm text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5"
         >
-          <BookOpen className="w-4 h-4" />
+          <BookOpen className="w-4 h-4 text-teal-600" />
           <span>Dictionary</span>
         </button>
 
@@ -62,44 +63,31 @@ export function ActionControls({
           type="button"
           disabled={!canClear || isValidating}
           onClick={onClear}
-          className="py-3 px-2 rounded-xl font-extrabold text-sm text-white bg-rose-600 hover:bg-rose-500 active:scale-95 shadow-md disabled:opacity-40 disabled:pointer-events-none transition flex items-center justify-center gap-1.5"
+          className="py-2.5 px-2 rounded-xl font-bold text-sm text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition flex items-center justify-center gap-1.5"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className="w-4 h-4 text-rose-600" />
           <span>Clear</span>
         </button>
       </div>
 
-      {/* Secondary Controls: Shuffle, Swap, Pass */}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <button
-          type="button"
-          disabled={!isPlayerTurn}
-          onClick={onShuffle}
-          className="flex-1 py-2 px-2 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-slate-200 text-xs font-semibold border border-slate-700/60 shadow-sm transition active:scale-95 flex items-center justify-center gap-1 disabled:opacity-40"
-        >
-          <Shuffle className="w-3.5 h-3.5 text-amber-400" />
-          <span>Shuffle</span>
-        </button>
-
-        <button
-          type="button"
-          disabled={!isPlayerTurn}
-          onClick={onSwap}
-          className="flex-1 py-2 px-2 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-slate-200 text-xs font-semibold border border-slate-700/60 shadow-sm transition active:scale-95 flex items-center justify-center gap-1 disabled:opacity-40"
-        >
-          <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
-          <span>Swap</span>
-        </button>
-
-        <button
-          type="button"
-          disabled={!isPlayerTurn}
-          onClick={onPass}
-          className="flex-1 py-2 px-2 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-slate-200 text-xs font-semibold border border-slate-700/60 shadow-sm transition active:scale-95 flex items-center justify-center gap-1 disabled:opacity-40"
-        >
-          <SkipForward className="w-3.5 h-3.5 text-rose-400" />
-          <span>Pass</span>
-        </button>
+      {/* Game actions: icons sit above their labels, small and out of the way */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Shuffle', icon: Shuffle, color: 'text-amber-600', onClick: onShuffle },
+          { label: 'Swap', icon: ArrowLeftRight, color: 'text-sky-600', onClick: onSwap },
+          { label: 'Pass', icon: SkipForward, color: 'text-rose-600', onClick: onPass },
+        ].map(({ label, icon: Icon, color, onClick }) => (
+          <button
+            key={label}
+            type="button"
+            disabled={!isPlayerTurn}
+            onClick={onClick}
+            className="py-2 rounded-xl bg-white/95 hover:bg-white text-slate-700 text-[11px] font-bold border border-white shadow-sm active:scale-95 transition flex flex-col items-center justify-center gap-0.5 disabled:opacity-40"
+          >
+            <Icon className={`w-4 h-4 ${color}`} />
+            <span>{label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

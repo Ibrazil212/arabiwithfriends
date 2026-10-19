@@ -1,6 +1,6 @@
 import React from 'react';
 import { BoardCell, PlacedTile, Tile } from '../../types/game';
-import { Star, X } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface GameBoardProps {
   board: BoardCell[][];
@@ -31,8 +31,8 @@ export function GameBoard({
   return (
     <div className="w-full max-w-md mx-auto px-2 py-1 flex items-center justify-center">
       {/* Clean outer board container with subtle luxury bezel */}
-      <div className="w-full aspect-square bg-slate-900/90 p-1.5 sm:p-2 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md">
-        <div className="w-full h-full grid grid-cols-9 grid-rows-9 gap-1 bg-slate-950/80 p-1 rounded-xl">
+      <div className="w-full aspect-square bg-white p-1.5 sm:p-2 rounded-2xl shadow-xl border border-white">
+        <div className="w-full h-full grid grid-cols-9 grid-rows-9 gap-1 bg-slate-200 p-1 rounded-xl">
           {board.map((row, r) =>
             row.map((cell, c) => {
               const tempTile = getTempPlacedTile(r, c);
@@ -42,16 +42,16 @@ export function GameBoard({
               const isCenter = cell.multiplierType === 'CENTER';
 
               // Clean cell styling based on multipliers
-              let cellBg = 'bg-slate-800/80 hover:bg-slate-750 border border-slate-700/40 text-slate-400';
+              let cellBg = 'bg-slate-50 hover:bg-white border border-slate-200 text-slate-500';
 
               if (isCenter) {
-                cellBg = 'bg-gradient-to-br from-rose-500/90 to-amber-600/90 border border-rose-400/60 shadow-sm text-white';
+                cellBg = 'bg-gradient-to-br from-rose-400 to-amber-400 border border-rose-300 shadow-sm text-white';
               } else if (cell.multiplierType === '4X') {
-                cellBg = 'bg-purple-900/70 border border-purple-500/40 hover:bg-purple-850 text-purple-200';
+                cellBg = 'bg-purple-100 border border-purple-300 text-purple-800';
               } else if (cell.multiplierType === '3X') {
-                cellBg = 'bg-indigo-900/70 border border-indigo-500/40 hover:bg-indigo-850 text-indigo-200';
+                cellBg = 'bg-indigo-100 border border-indigo-300 text-indigo-800';
               } else if (cell.multiplierType === '2X') {
-                cellBg = 'bg-sky-900/70 border border-sky-500/40 hover:bg-sky-850 text-sky-200';
+                cellBg = 'bg-sky-100 border border-sky-300 text-sky-800';
               }
 
               // Interactive highlight if user has a rack tile selected
@@ -70,36 +70,30 @@ export function GameBoard({
                     }
                   }}
                   className={`relative w-full h-full rounded-md sm:rounded-lg flex flex-col items-center justify-center transition-all select-none p-0 overflow-hidden ${cellBg} ${
-                    isTargetable ? 'ring-2 ring-amber-400/80 ring-offset-1 ring-offset-slate-900 cursor-pointer scale-[1.02] bg-slate-700/90 z-10' : ''
-                  } ${isCompLast && !isTemp ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-slate-900 z-10' : ''}`}
+                    isTargetable ? 'ring-2 ring-amber-500 ring-offset-1 ring-offset-white cursor-pointer scale-[1.02] bg-amber-50 z-10' : ''
+                  } ${isCompLast && !isTemp ? 'ring-2 ring-amber-500 ring-offset-1 ring-offset-white z-10' : ''}`}
                 >
                   {/* Placed Tile Rendering */}
                   {activeTile ? (
                     <div
-                      className={`w-full h-full flex flex-col items-center justify-between p-0.5 rounded-md sm:rounded-lg transition-transform ${
+                      className={`relative w-full h-full flex items-center justify-center rounded-md sm:rounded-lg transition-transform ${
                         isTemp
-                          ? 'bg-gradient-to-b from-amber-300 via-amber-400 to-orange-400 text-slate-950 shadow-md ring-2 ring-white scale-[0.96]'
+                          ? 'bg-gradient-to-b from-amber-200 to-amber-400 text-slate-950 shadow-md ring-2 ring-amber-600 scale-[0.96]'
                           : isCompLast
-                          ? 'bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300 text-slate-950 shadow-md border border-amber-400'
-                          : 'bg-gradient-to-b from-[#fffaf0] via-[#fef3d6] to-[#fae6b8] border border-[#d8b368]/60 text-slate-950 shadow-sm'
+                          ? 'bg-gradient-to-b from-amber-100 to-amber-300 text-slate-950 shadow-md border-2 border-amber-500'
+                          : 'bg-gradient-to-b from-white to-amber-50 border-2 border-amber-400 text-slate-950 shadow-sm'
                       }`}
                     >
-                      {/* Arabic Letter (Centered, crisp & bold) */}
-                      <span className="font-arabic font-black text-lg sm:text-2xl md:text-3xl leading-none text-slate-950 mt-0.5 drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]">
+                      {/* Arabic letter: large, centered, never clipped */}
+                      <span className="font-arabic font-black text-2xl sm:text-3xl leading-[1.5] pt-0.5 text-slate-950">
                         {activeTile.letter}
                       </span>
 
-                      {/* Point Value (Bottom Right) */}
-                      <div className="w-full flex items-center justify-between px-1 text-[8px] sm:text-[10px] font-black text-slate-700 leading-none">
-                        {isTemp ? (
-                          <span className="w-3 h-3 rounded-full bg-slate-950/10 flex items-center justify-center">
-                            <X className="w-2.5 h-2.5 text-slate-950" />
-                          </span>
-                        ) : (
-                          <span className="opacity-0">.</span>
-                        )}
-                        <span>{activeTile.points}</span>
-                      </div>
+                      {/* Points: small badge in the corner, out of the letter's way */}
+                      <span className="absolute bottom-0 right-0.5 text-[9px] sm:text-[10px] font-black text-slate-600 leading-none">
+                        {activeTile.points}
+                      </span>
+
                     </div>
                   ) : (
                     /* Empty Cell Multiplier Badge / Center Label */
@@ -112,7 +106,7 @@ export function GameBoard({
                           </span>
                         </div>
                       ) : cell.multiplierType !== 'NONE' ? (
-                        <div className="font-black text-[9px] sm:text-[11px] leading-none tracking-tight">
+                        <div className="font-black text-[10px] sm:text-xs leading-none tracking-tight">
                           <span>{cell.multiplierValue}×</span>
                         </div>
                       ) : null}

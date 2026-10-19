@@ -145,17 +145,17 @@ export function GameHeader({
       </div>
 
       {/* Grid Fill Target Progress (Target: 80% / 65 cells) */}
-      <div className="mt-2 bg-slate-900/90 rounded-2xl px-3 py-2 border border-slate-700/60 shadow-md">
-        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-300 mb-1">
+      <div className="mt-2 bg-white/95 rounded-2xl px-3 py-2 border border-white shadow-md">
+        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 mb-1">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm animate-pulse"></span>
-            <span className="font-bold text-slate-200">Grid Target (80%)</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse"></span>
+            <span className="font-bold text-slate-800">Grid Target (80%)</span>
           </div>
-          <span className="text-emerald-300 font-mono font-bold text-xs">
+          <span className="text-emerald-700 font-mono font-bold text-xs">
             {filledCount} / {GRID_FILL_TARGET_CELLS} cells ({fillPercent}%)
           </span>
         </div>
-        <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 p-0.5">
+        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden p-0.5">
           <div
             className="bg-gradient-to-r from-teal-500 via-emerald-400 to-amber-400 h-full rounded-full transition-all duration-500 shadow-sm"
             style={{ width: `${targetProgress}%` }}
