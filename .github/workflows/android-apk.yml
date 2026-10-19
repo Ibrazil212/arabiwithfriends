@@ -1,5 +1,8 @@
 name: Build Android APK
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
@@ -42,3 +45,16 @@ jobs:
           name: arabic-with-friends-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+      - name: Rename APK for release
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/arabic-with-friends-debug.apk
+
+      - name: Publish APK to a fixed-URL pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-latest
+          name: Debug build (latest)
+          prerelease: true
+          body: "APK de teste gerado automaticamente a partir do main. Baixe o arquivo arabic-with-friends-debug.apk."
+          files: android/app/build/outputs/apk/debug/arabic-with-friends-debug.apk
+          fail_on_unmatched_files: true
