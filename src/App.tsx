@@ -488,8 +488,16 @@ export default function App() {
         />
       </main>
 
-      {/* Bottom Controls & Tile Rack */}
+      {/* Tile rack sits directly under the board, with the actions below it */}
       <footer className="pb-3 pt-1">
+        <PlayerRack
+          rack={gameState.playerRack}
+          selectedTileId={selectedRackTile?.id || null}
+          onSelectTile={handleSelectRackTile}
+          onPlaceTile={handlePlaceFromRack}
+          disabled={gameState.turn !== 'player' || gameState.status !== 'playing'}
+        />
+
         <ActionControls
           canSubmit={placedTiles.length > 0}
           canClear={placedTiles.length > 0}
@@ -501,14 +509,6 @@ export default function App() {
           onSwap={() => setIsSwapOpen(true)}
           onPass={handlePass}
           onOpenDictionary={() => setIsDictionaryOpen(true)}
-        />
-
-        <PlayerRack
-          rack={gameState.playerRack}
-          selectedTileId={selectedRackTile?.id || null}
-          onSelectTile={handleSelectRackTile}
-          onPlaceTile={handlePlaceFromRack}
-          disabled={gameState.turn !== 'player' || gameState.status !== 'playing'}
         />
       </footer>
 
