@@ -30,6 +30,9 @@ import { CheckCircle, AlertTriangle, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => authService.getCurrentUser());
+  // Logo intro shown when the player enters the board (fades out after a moment)
+  const [showIntro, setShowIntro] = useState(() => !!authService.getCurrentUser());
+  const [introLeaving, setIntroLeaving] = useState(false);
   const [gameState, setGameState] = useState<GameState>(createNewGame);
   const [placedTiles, setPlacedTiles] = useState<PlacedTile[]>([]);
   const [selectedRackTile, setSelectedRackTile] = useState<Tile | null>(null);
@@ -406,7 +409,13 @@ export default function App() {
     return (
       <>
         <SimulatedOtpToast />
-        <AuthScreen onAuthenticated={(user) => setCurrentUser(user)} />
+        <AuthScreen
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setIntroLeaving(false);
+            setShowIntro(true);
+          }}
+        />
       </>
     );
   }
@@ -414,6 +423,24 @@ export default function App() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-teal-500 via-emerald-400 to-amber-300 flex flex-col justify-between overflow-x-hidden text-slate-900">
       <SimulatedOtpToast />
+
+      {showIntro && (
+        <div
+          className={`fixed inset-0 z-[60] flex items-center justify-center bg-gradient-to-b from-emerald-50 via-green-100 to-lime-200 transition-opacity duration-500 ${
+            introLeaving ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          onTransitionEnd={() => {
+            if (introLeaving) setShowIntro(false);
+          }}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Arabic With Friends"
+            className="w-44 h-44 object-contain animate-logo-intro"
+            onAnimationEnd={() => setIntroLeaving(true)}
+          />
+        </div>
+      )}
 
       {/* Header with Scores & Navigation */}
       <GameHeader
@@ -450,7 +477,7 @@ export default function App() {
       )}
 
       {/* 9x9 Board */}
-      <main className="flex-1 flex flex-col justify-center">
+      <main className="flex-1 flex flex-col justify-center animate-board-enter">
         <GameBoard
           board={gameState.board}
           placedTiles={placedTiles}

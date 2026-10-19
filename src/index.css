@@ -35,3 +35,21 @@
 .touch-none {
   touch-action: none;
 }
+
+/* Entrance animations: logo intro on sign-in, then the board slides up smoothly */
+@keyframes logo-intro {
+  0% { opacity: 0; transform: scale(0.7) translateY(12px); }
+  60% { opacity: 1; transform: scale(1.04) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-logo-intro {
+  animation: logo-intro 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes board-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.animate-board-enter {
+  animation: board-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}

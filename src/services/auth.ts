@@ -161,7 +161,8 @@ export class AuthService {
       return { success: false, error: 'User account not found. Please register first.' };
     }
 
-    if (user.isVerified) {
+    // Already-verified accounts only skip the code when no code is pending.
+    if (user.isVerified && !user.otpCode) {
       return { success: true, user };
     }
 
@@ -195,6 +196,32 @@ export class AuthService {
     localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(activeUser));
 
     return { success: true, user: activeUser };
+  }
+
+  /**
+   * Passwordless entry: creates the account on first use and sends a 6-digit code to the email.
+   */
+  public requestEmailCode(email: string): { success: boolean; error?: string; otp?: string; expiresAt?: number } {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!this.isValidEmail(cleanEmail)) {
+      return { success: false, error: 'Please enter a valid email address (e.g. name@example.com).' };
+    }
+
+    const users = loadUsers();
+    if (!users[cleanEmail]) {
+      users[cleanEmail] = {
+        id: 'usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        email: cleanEmail,
+        name: cleanEmail.split('@')[0],
+        isVerified: false,
+        createdAt: Date.now(),
+        passwordHash: '',
+        stats: { gamesPlayed: 0, wins: 0, losses: 0, ties: 0, highestScore: 0 },
+      };
+      saveUsers(users);
+    }
+
+    return this.resendOtp(cleanEmail);
   }
 
   /**
