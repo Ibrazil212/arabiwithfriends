@@ -85,7 +85,10 @@ export function GameBoard({
                       }`}
                     >
                       {/* Arabic letter: large, centered, never clipped */}
-                      <span className="font-arabic font-black text-2xl sm:text-3xl leading-[1.5] pt-0.5 text-slate-950">
+                      <span
+                        className="font-bold text-2xl sm:text-3xl leading-[1.5] pt-0.5 text-slate-950"
+                        style={{ fontFamily: "'Times New Roman', Amiri, serif" }}
+                      >
                         {activeTile.letter}
                       </span>
 
