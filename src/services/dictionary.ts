@@ -1,5 +1,9 @@
 import { normalizeArabic } from './arabicLetters';
 
+// Base URL of the backend API. Empty on the web (same origin), set at build time
+// for the native apps (Android/iOS), which must reach a public server.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
 export interface ArabicWordEntry {
   word: string;
   translation: string;
@@ -901,7 +905,7 @@ class ArabicDictionaryService {
 
     // 2. Fetch from backend Almaany / Linguistic checker API
     try {
-      const response = await fetch(`/api/dictionary/check?word=${encodeURIComponent(clean)}`);
+      const response = await fetch(`${API_BASE_URL}/api/dictionary/check?word=${encodeURIComponent(clean)}`);
       if (response.ok) {
         const data = await response.json();
         if (data.isValid) {

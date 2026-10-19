@@ -8,6 +8,28 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Allow the native apps (Capacitor WebView origins) and any configured web origin
+// to call the API. Set ALLOWED_ORIGINS as a comma-separated list in production.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+const NATIVE_ORIGINS = ['capacitor://localhost', 'http://localhost', 'https://localhost'];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (NATIVE_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // In-memory cache for Arabic dictionary lookups
 const dictionaryCache = new Map<string, {
   isValid: boolean;
